@@ -2,12 +2,15 @@ export module adk.common.MessageComposer;
 
 import std.core;
 import adk.common;
+import adk.common.StringUtils;
+
+#include <adk/defs.h>
 
 export namespace adk {
 
 template <typename T>
-concept CMessageCommitter = requires(T committer) {
-    { committer.IsEnabled() } -> std::same_as<bool>;
+concept CMessageCommitter = requires(T &committer, const T &constCommitter) {
+    { constCommitter.IsEnabled() } -> std::same_as<bool>;
     { committer.Commit(std::declval<const char *>()) };
 };
 
@@ -24,6 +27,7 @@ public:
         committer(std::move(committer))
     {}
 
+    inline
     ~MessageComposer()
     {
         if (IsEnabled()) {
@@ -32,30 +36,77 @@ public:
     }
 
     inline bool
-    IsEnabled()
+    IsEnabled() const
     {
         return committer.IsEnabled();
     }
 
-    MessageComposer &
+    /** Get non-const reference from constant one. This hack needed to make temporal object usable
+     * for message composing.
+     */
+    inline MessageComposer &
+    Ref() const
+    {
+        return const_cast<MessageComposer &>(*this);
+    }
+
+    inline MessageComposer &
     AppendChar(char c) const
     {
-        const_cast<MessageComposer &>(*this)._AppendChar(c);
-        return const_cast<MessageComposer &>(*this);
+        Ref()._AppendChar(c);
+        return Ref();
     }
 
-    MessageComposer &
+    inline MessageComposer &
     AppendMessage(const char *msg, size_t len = -1_sz) const
     {
-        const_cast<MessageComposer &>(*this)._AppendMessage(msg, len);
-        return const_cast<MessageComposer &>(*this);
+        Ref()._AppendMessage(msg, len);
+        return Ref();
+    }
+
+    inline MessageComposer &
+    AppendMessage(const std::string &msg) const
+    {
+        Ref()._AppendMessage(msg.data(), msg.size());
+        return Ref();
     }
 
     MessageComposer &
-    AppendMessage(const std::string &msg) const
+    Format(const char *msg, ...) const FORMAT_PRINTF(2, 3)
     {
-        const_cast<MessageComposer &>(*this)._AppendMessage(msg.data(), msg.size());
-        return const_cast<MessageComposer &>(*this);
+        va_list args;
+        va_start(args, msg);
+        std::string result = StringFormatV(msg, args);
+        va_end(args);
+        Ref()._AppendMessage(result.data(), result.size());
+        return Ref();
+    }
+
+    inline MessageComposer &
+    AppendCharCond(char c) const
+    {
+        if (IsEnabled()) {
+            Ref()._AppendChar(c);
+        }
+        return Ref();
+    }
+
+    inline MessageComposer &
+    AppendMessageCond(const char *msg, size_t len = -1_sz) const
+    {
+        if (IsEnabled()) {
+            Ref()._AppendMessage(msg, len);
+        }
+        return Ref();
+    }
+
+    inline MessageComposer &
+    AppendMessageCond(const std::string &msg) const
+    {
+        if (IsEnabled()) {
+            Ref()._AppendMessage(msg.data(), msg.size());
+        }
+        return Ref();
     }
 
 protected:
@@ -126,14 +177,14 @@ template <typename T>
 inline MessageComposer<T> &
 operator <<(const MessageComposer<T> &c, const char *s)
 {
-    return c.AppendMessage(s);
+    return c.AppendMessageCond(s);
 }
 
 template <typename T>
 inline MessageComposer<T> &
 operator <<(const MessageComposer<T> &c, const std::string &s)
 {
-    return c.AppendMessage(s);
+    return c.AppendMessageCond(s);
 }
 
 template <typename T, typename TValue,
@@ -141,37 +192,57 @@ template <typename T, typename TValue,
 inline MessageComposer<T> &
 operator <<(const MessageComposer<T> &c, TValue v)
 {
-    return c.AppendMessage(std::to_string(v));
+    if (c.IsEnabled()) {
+        return c.AppendMessage(std::to_string(v));
+    }
+    return c.Ref();
 }
 
 template <typename T>
 inline MessageComposer<T> &
 operator <<(const MessageComposer<T> &c, const std::error_code &e)
 {
-    return c.AppendMessage(e.message());
+    if (c.IsEnabled()) {
+        return c.AppendMessage(e.message());
+    }
+    return c.Ref();
 }
 
 template <typename T>
 inline MessageComposer<T> &
 operator <<(const MessageComposer<T> &c, bool b)
 {
-    return c.AppendMessage(b ? "true" : "false");
+    return c.AppendMessageCond(b ? "true" : "false");
 }
 
 template <typename T>
 inline MessageComposer<T> &
 operator <<(const MessageComposer<T> &c, char chr)
 {
-    return c.AppendChar(chr);
+    return c.AppendCharCond(chr);
 }
 
 template <typename T, typename TValue,
           std::enable_if_t<std::is_enum_v<TValue>, bool> = true>
 inline MessageComposer<T> &
-operator <<(const MessageComposer<T> &c, T v)
+operator <<(const MessageComposer<T> &c, TValue v)
 {
-    return c.AppendMessage(std::to_string(static_cast<int>(v)));
+    if (c.IsEnabled()) {
+        return c.AppendMessage(std::to_string(static_cast<int>(v)));
+    }
+    return c.Ref();
+}
+
+template <typename T, typename TValue>
+inline MessageComposer<T> &
+operator <<(const MessageComposer<T> &c, TValue *x)
+{
+    if (c.IsEnabled()) {
+        c.Format("[%p]", x);
+    }
+    return c.Ref();
 }
 
 } /* namespace adk */
 
+module: private;
