@@ -42,3 +42,5 @@ export import <forward_list>;
 export import <stack>;
 
 export import <concepts>;
+
+#include "source_location.h"

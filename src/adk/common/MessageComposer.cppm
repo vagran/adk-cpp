@@ -11,9 +11,12 @@ export namespace adk {
 template <typename T>
 concept CMessageCommitter = requires(T &committer, const T &constCommitter) {
     { constCommitter.IsEnabled() } -> std::same_as<bool>;
-    { committer.Commit(std::declval<const char *>()) };
+    { committer.Commit(std::declval<const std::string_view &>()) };
 };
 
+/** Object of this class is intended to be used as temporal object to compose a message and commit
+ * it at the end of the expression. Can be used for logging, exception messages, etc.
+ */
 template <CMessageCommitter TCommitter>
 class MessageComposer {
 public:
@@ -58,16 +61,9 @@ public:
     }
 
     inline MessageComposer &
-    AppendMessage(const char *msg, size_t len = -1_sz) const
+    AppendMessage(const std::string_view &msg) const
     {
-        Ref()._AppendMessage(msg, len);
-        return Ref();
-    }
-
-    inline MessageComposer &
-    AppendMessage(const std::string &msg) const
-    {
-        Ref()._AppendMessage(msg.data(), msg.size());
+        Ref()._AppendMessage(msg);
         return Ref();
     }
 
@@ -78,7 +74,7 @@ public:
         va_start(args, msg);
         std::string result = StringFormatV(msg, args);
         va_end(args);
-        Ref()._AppendMessage(result.data(), result.size());
+        Ref()._AppendMessage(result);
         return Ref();
     }
 
@@ -92,19 +88,10 @@ public:
     }
 
     inline MessageComposer &
-    AppendMessageCond(const char *msg, size_t len = -1_sz) const
+    AppendMessageCond(const std::string_view &msg) const
     {
         if (IsEnabled()) {
-            Ref()._AppendMessage(msg, len);
-        }
-        return Ref();
-    }
-
-    inline MessageComposer &
-    AppendMessageCond(const std::string &msg) const
-    {
-        if (IsEnabled()) {
-            Ref()._AppendMessage(msg.data(), msg.size());
+            Ref()._AppendMessage(msg);
         }
         return Ref();
     }
@@ -129,9 +116,9 @@ protected:
             return;
         }
         if (IsStaticBuf()) {
-            committer.Commit(buf);
+            committer.Commit(std::string_view(buf, bufLen));
         } else {
-            committer.Commit(overflowBuf.c_str());
+            committer.Commit(overflowBuf);
         }
     }
 
@@ -151,17 +138,12 @@ protected:
     }
 
     void
-    _AppendMessage(const char *msg, size_t len = -1_sz)
+    _AppendMessage(const std::string_view &msg)
     {
-        if (!msg) {
-            msg = "<null>";
-        }
-        if (len == -1_sz) {
-            len = strlen(msg);
-        }
         if (IsStaticBuf()) {
+            size_t len = msg.size();
             if (bufLen + len + 1 <= sizeof(buf)) {
-                memcpy(buf + bufLen, msg, len);
+                memcpy(buf + bufLen, msg.data(), len);
                 bufLen += len;
                 buf[bufLen] = 0;
                 return;
@@ -182,7 +164,7 @@ operator <<(const MessageComposer<T> &c, const char *s)
 
 template <typename T>
 inline MessageComposer<T> &
-operator <<(const MessageComposer<T> &c, const std::string &s)
+operator <<(const MessageComposer<T> &c, const std::string_view &s)
 {
     return c.AppendMessageCond(s);
 }
@@ -244,5 +226,3 @@ operator <<(const MessageComposer<T> &c, TValue *x)
 }
 
 } /* namespace adk */
-
-module: private;
