@@ -2,7 +2,7 @@ export module adk.common.MessageComposer;
 
 import std.core;
 import adk.common;
-import adk.common.StringUtils;
+import adk.common.string_utils;
 
 #include <adk/defs.h>
 
@@ -31,17 +31,27 @@ public:
     {}
 
     inline
-    ~MessageComposer()
+    ~MessageComposer() noexcept(false)
     {
-        if (IsEnabled()) {
-            Commit();
+        if (!IsEnabled()) {
+            return;
+        }
+        /** Ensure all members are properly destroyed if committer throws an exception. */
+        TCommitter committer(std::move(*this->committer));
+        this->committer.reset();
+        if (IsStaticBuf()) {
+            committer.Commit(std::string_view(buf, bufLen));
+        } else {
+            std::string msg = std::move(*overflowBuf);
+            overflowBuf.reset();
+            committer.Commit(msg);
         }
     }
 
     inline bool
     IsEnabled() const
     {
-        return committer.IsEnabled();
+        return committer->IsEnabled();
     }
 
     /** Get non-const reference from constant one. This hack needed to make temporal object usable
@@ -97,16 +107,17 @@ public:
     }
 
 protected:
-    TCommitter committer;
-    char buf[1024];
+    /** Optional used to properly handle destruction sequence with possible exception throwing. */
+    std::optional<TCommitter> committer;
+    char buf[4];//XXX
     ssize_t bufLen = 0;
     /** Dynamically allocated buffer when static one is exhausted. */
-    std::string overflowBuf;
+    std::optional<std::string> overflowBuf;
 
     inline bool
     IsStaticBuf() const
     {
-        return bufLen == -1_sz;
+        return overflowBuf.has_value();
     }
 
     inline void
@@ -131,10 +142,9 @@ protected:
                 buf[bufLen] = 0;
                 return;
             }
-            overflowBuf.assign(buf, bufLen);
-            bufLen = -1_sz;
+            overflowBuf.emplace(buf, bufLen);
         }
-        overflowBuf += c;
+        *overflowBuf += c;
     }
 
     void
@@ -148,10 +158,9 @@ protected:
                 buf[bufLen] = 0;
                 return;
             }
-            overflowBuf.assign(buf, bufLen);
-            bufLen = -1;
+            overflowBuf.emplace(buf, bufLen);
         }
-        overflowBuf += msg;
+        *overflowBuf += msg;
     }
 };
 

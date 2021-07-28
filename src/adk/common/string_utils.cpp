@@ -1,4 +1,11 @@
-module adk.common.StringUtils;
+module;
+
+#if defined( __has_include ) &&  __has_include(<cxxabi.h>)
+#include <cxxabi.h>
+#define HAS_CXXABI
+#endif
+
+module adk.common.string_utils;
 
 import std.core;
 
@@ -57,3 +64,35 @@ adk::StringFormatV(size_t preallocSize, const char *msg, va_list args)
     result.resize(n);
     return result;
 }
+
+std::string_view
+adk::GetFileBaseName(const std::string_view &filePath)
+{
+    std::size_t lastSlash = filePath.find_last_of('/');
+    if (lastSlash != std::string_view::npos) {
+        return filePath.substr(lastSlash + 1);
+    }
+    return filePath;
+}
+
+#ifdef HAS_CXXABI
+
+std::string
+adk::DemangleName(const char *name)
+{
+    int status = 0;
+    std::unique_ptr<char, void(*)(void*)> demangled(
+        abi::__cxa_demangle(name, nullptr, nullptr, &status),
+        std::free);
+    return demangled ? demangled.get() : name;
+}
+
+#else /* HAS_CXXABI */
+
+std::string
+adk::DemangleName(const char *name)
+{
+    return name;
+}
+
+#endif /* HAS_CXXABI */

@@ -2,7 +2,7 @@ export module adk.log;
 
 import std.core;
 import std.io;
-import adk.common.StringUtils;
+import adk.common.string_utils;
 import adk.common.MessageComposer;
 
 
@@ -182,7 +182,7 @@ public:
     inline LogMessageComposer &
     Level(Log::Level level) const
     {
-        const_cast<LogMessageComposer &>(*this).committer.SetLevel(level);
+        const_cast<LogMessageComposer &>(*this).committer->SetLevel(level);
         return const_cast<LogMessageComposer &>(*this);
     }
 
@@ -250,22 +250,6 @@ GetTimestampString(const Log::TimePoint &timeStamp, const char *fmt, bool utc = 
     ss << StringFormat("%03d", ms);
 
     return ss.str();
-}
-
-const char *
-GetFileBaseName(const char *filePath)
-{
-    size_t i;
-    std::ptrdiff_t lastSlash = -1;
-    for (i = 0; filePath[i]; i++) {
-        if (filePath[i] == '/') {
-            lastSlash = i;
-        }
-    }
-    if (lastSlash != -1) {
-        return filePath + lastSlash + 1;
-    }
-    return filePath;
 }
 
 std::unique_ptr<Log> Log::instance;
@@ -350,7 +334,7 @@ Log::RecordFormatter::Format(const Record &record)
        GetTimestampString(record.timeStamp, "%Y-%m-%d %H:%M:%S").c_str(),
        Log::LevelToString(record.level),
        record.loggerName.c_str(),
-       GetFileBaseName(record.srcLoc.file_name()),
+       GetFileBaseName(record.srcLoc.file_name()).data(),
        record.srcLoc.line(),
        record.msg.c_str());
 }

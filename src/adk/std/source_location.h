@@ -7,6 +7,8 @@ export namespace std {
 
 struct source_location {
 public:
+    source_location() = default;
+
     static source_location
     current(std::uint_least32_t line = __builtin_LINE(),
             std::uint_least32_t column = __builtin_COLUMN(),
@@ -41,10 +43,10 @@ public:
     }
 
 private:
-    std::uint_least32_t _line;
-    std::uint_least32_t _column;
-    const char *_file_name;
-    const char *_function_name;
+    std::uint_least32_t _line = 0;
+    std::uint_least32_t _column = 0;
+    const char *_file_name = nullptr;
+    const char *_function_name = nullptr;
 
     constexpr source_location(std::uint_least32_t line,
                               std::uint_least32_t column,

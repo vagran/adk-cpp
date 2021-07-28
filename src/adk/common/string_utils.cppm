@@ -1,4 +1,4 @@
-export module adk.common.StringUtils;
+export module adk.common.string_utils;
 
 #include <adk/defs.h>
 
@@ -19,5 +19,11 @@ StringFormatV(const char *msg, va_list args) FORMAT_PRINTF(1, 0);
 
 std::string
 StringFormatV(size_t preallocSize, const char *msg, va_list args) FORMAT_PRINTF(2, 0);
+
+std::string_view
+GetFileBaseName(const std::string_view &filePath);
+
+std::string
+DemangleName(const char *name);
 
 }
