@@ -44,3 +44,13 @@ export import <stack>;
 export import <concepts>;
 
 #include "source_location.h"
+
+#if defined(__has_include)
+#   if __has_include(<coroutine>)
+        export import <coroutine>;
+#   elif __has_include(<experimental/coroutine>)
+        export import <experimental/coroutine>;
+#   endif
+#else
+    export import <coroutine>;
+#endif
