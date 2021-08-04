@@ -19,7 +19,7 @@ gradlePlugin {
     plugins {
         create("customPlugin") {
             id = "io.github.vagran.adk.gradle"
-            implementationClass = "io.github.vagran.adk.gradle.GreetingPlugin"
+            implementationClass = "io.github.vagran.adk.gradle.AdkPlugin"
         }
     }
 }
