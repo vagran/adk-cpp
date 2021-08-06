@@ -58,8 +58,8 @@ class AdkStringListProperty(project: Project, conventionValue: Iterable<String>?
 }
 
 
-class AdkFileListProperty(val project: Project,
-                          val baseDir: Any? = null,
+class AdkFileListProperty(project: Project,
+                          baseDir: Any? = null,
                           conventionValue: Iterable<File>? = null,
                           conventionValueProvider: (() -> Iterable<File>)? = null) {
 
@@ -71,7 +71,7 @@ class AdkFileListProperty(val project: Project,
         }
     }
 
-    internal val resolver = BaseDirFileResolver(
+    private val resolver = BaseDirFileResolver(
         if (baseDir != null) project.file(baseDir) else project.projectDir)
 
     operator fun getValue(thisRef: Any, property: KProperty<*>): List<File> = prop.get()

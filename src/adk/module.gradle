@@ -1,0 +1,11 @@
+module {
+    name = "adk"
+    println(name)
+    include("aa", "vv")
+
+    module("MyModule") {
+        include("inc")
+        println(name)
+    }
+    println(name)
+}

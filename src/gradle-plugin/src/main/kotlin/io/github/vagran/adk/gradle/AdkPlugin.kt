@@ -7,18 +7,35 @@ class AdkPlugin: Plugin<Project> {
 
     override fun apply(project: Project)
     {
-        val extension: GreetingExtension =
-                project.extensions.create("greeting", GreetingExtension::class.java)
-
         val adkExt: AdkExtension =
             project.extensions.create("adk", AdkExtension::class.java, project)
 
-        val task = project.tasks.register("greeting", GreetingTask::class.java)
+        val moduleExt: ModuleExtension =
+            project.extensions.create("module", ModuleExtension::class.java, project, false)
+
+//        val task = project.tasks.register("greeting", GreetingTask::class.java)
+
         project.afterEvaluate {
-            p: Project? ->
-            task.configure {
-                t: GreetingTask ->
-                t.who = extension.who
+//            task.configure {
+//                t: GreetingTask ->
+//                t.who = extension.who
+//            }
+
+            val registry = ModuleRegistry(adkExt)
+
+            registry.Build {
+                dirPath ->
+                val scriptPath = dirPath.resolve("module.gradle")
+                if (!scriptPath.exists()) {
+                    return@Build null
+                }
+                if (!scriptPath.isFile) {
+                    throw Error("module.gradle should be regular file: $scriptPath")
+                }
+                val ctx = moduleExt.CreateContext(dirPath)
+                project.apply(mapOf("from" to scriptPath))
+                moduleExt.CloseContext()
+                return@Build ctx
             }
         }
     }
