@@ -5,10 +5,14 @@ import org.gradle.api.internal.file.BaseDirFileResolver
 import java.io.File
 import kotlin.reflect.KProperty
 
-/** Helper class for delegated property mapped to Gradle Property class. */
+/** Helper class for delegated property mapped to Gradle Property class.
+ * @param readOnlyMessage Throw exception with this message if attempting to set value,
+ *  when non-null.
+ */
 class AdkProperty<T>(project: Project, type: Class<T>, conventionValue: T? = null,
                      conventionValueProvider: (() -> T)? = null,
-                     val validator: ((T) -> Unit)? = null) {
+                     val validator: ((T) -> Unit)? = null,
+                     val readOnlyMessage: String? = null) {
 
     val prop = project.objects.property(type).apply {
         if (conventionValue != null) {
@@ -22,6 +26,7 @@ class AdkProperty<T>(project: Project, type: Class<T>, conventionValue: T? = nul
 
     operator fun setValue(thisRef: Any, property: KProperty<*>, value: T)
     {
+        readOnlyMessage?.also { throw Error(it) }
         validator?.invoke(value)
         prop.set(value)
     }

@@ -11,7 +11,7 @@ class AdkPlugin: Plugin<Project> {
             project.extensions.create("adk", AdkExtension::class.java, project)
 
         val moduleExt: ModuleExtension =
-            project.extensions.create("module", ModuleExtension::class.java, project, false)
+            project.extensions.create("module", ModuleExtension::class.java, project, null)
 
 //        val task = project.tasks.register("greeting", GreetingTask::class.java)
 

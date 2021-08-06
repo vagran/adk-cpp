@@ -3,9 +3,14 @@ package io.github.vagran.adk.gradle
 import org.gradle.api.Project
 import java.io.File
 
-class ModuleExtensionContext(project: Project, val baseDir: File) {
+/**
+ * @param nestedName Nested module name for nested context.
+ */
+class ModuleExtensionContext(project: Project, val baseDir: File, val nestedName: String?) {
 
-    var name: String by AdkProperty(project, String::class.java)
+    val nameProp = AdkProperty(project, String::class.java, conventionValue = nestedName,
+         readOnlyMessage = if (nestedName != null) "Name already set by named module block" else null)
+    var name: String by nameProp
 
     val includeProp = AdkFileListProperty(project, baseDir = baseDir)
     var include: List<File> by includeProp

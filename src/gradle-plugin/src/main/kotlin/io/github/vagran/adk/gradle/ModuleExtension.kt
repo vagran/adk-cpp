@@ -6,11 +6,11 @@ import java.io.File
 import kotlin.reflect.KMutableProperty1
 import kotlin.reflect.KProperty
 
-open class ModuleExtension(private val project: Project, private val nested: Boolean) {
+open class ModuleExtension(private val project: Project, private val nestedName: String?) {
 
     fun CreateContext(baseDir: File): ModuleExtensionContext
     {
-        return ModuleExtensionContext(project, baseDir).also { _ctx = it }
+        return ModuleExtensionContext(project, baseDir, nestedName).also { _ctx = it }
     }
 
     fun CloseContext()
@@ -79,12 +79,11 @@ open class ModuleExtension(private val project: Project, private val nested: Boo
     }
 
     fun module(name: String, config: Closure<ModuleExtension>) {
-        if (nested) {
+        if (nestedName != null) {
             throw Error("Module block can be nested in top-level module block only")
         }
-        val e = ModuleExtension(project, true)
+        val e = ModuleExtension(project, name)
         ctx.childContexts.add(e.CreateContext(ctx.baseDir))
-        e.name = name
         project.configure(e, config)
         e.CloseContext()
     }
