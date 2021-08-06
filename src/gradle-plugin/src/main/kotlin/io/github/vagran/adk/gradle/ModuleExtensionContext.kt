@@ -2,6 +2,7 @@ package io.github.vagran.adk.gradle
 
 import org.gradle.api.Project
 import java.io.File
+import java.util.*
 
 /**
  * @param nestedName Nested module name for nested context.
@@ -39,5 +40,5 @@ class ModuleExtensionContext(project: Project, val baseDir: File, val nestedName
     val libsProp = AdkStringListProperty(project)
     var libs: List<String> by libsProp
 
-    val childContexts = ArrayList<ModuleExtensionContext>()
+    val childContexts = TreeMap<String, ModuleExtensionContext>()
 }

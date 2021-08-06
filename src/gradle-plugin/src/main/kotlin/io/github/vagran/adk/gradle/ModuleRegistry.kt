@@ -16,57 +16,36 @@ class ModuleRegistry(private val adkConfig: AdkExtension) {
     fun Build(moduleScriptReader: ModuleScriptReader)
     {
         for (modPath in adkConfig.modules) {
-            ScanDirectory(modPath, null, moduleScriptReader)
+            ScanDirectory(modPath.normalize(), null, moduleScriptReader)
         }
+    }
+
+    companion object {
+        /** Get last component of fully qualified module name. */
+        fun GetSubmoduleName(moduleName: String): String = moduleName.substringAfterLast('.')
     }
 
     // /////////////////////////////////////////////////////////////////////////////////////////////
 
-    private companion object {
-        private fun StripFileNameExtension(fileName: String): String
-        {
-            val idx = fileName.indexOf('.')
-            if (idx == -1) {
-                return fileName
-            }
-            return fileName.substring(idx + 1)
-        }
-
-        /** Get last component of fully qualified module name. */
-        private fun GetFileNameExtension(moduleName: String): String
-        {
-            val idx = moduleName.indexOf('.')
-            if (idx == -1) {
-                return moduleName
-            }
-            return moduleName.substring(0, idx)
-        }
-
-        private fun GetSubmoduleName(moduleName: String): String = GetFileNameExtension(moduleName)
-    }
-
     /** Indexes file names both with and without extension. */
     private class FileNameSet {
-        val fileNames = TreeSet<String>()
         /** Key is basename, value is extension. */
         val baseNames = TreeMap<String, String>()
 
         fun Add(fileName: String)
         {
-            val baseName = StripFileNameExtension(fileName)
+            val baseName = AdkExtension.StripFileNameExtension(fileName)
             val ext = baseNames[baseName]
             if (ext != null) {
                 throw Error("Several files have the same basename in one directory which is " +
                             "disallowed: `$fileName` and `$baseName.$ext`")
             }
-            fileNames.add(fileName)
-            baseNames[baseName] = GetFileNameExtension(fileName)
+            baseNames[baseName] = AdkExtension.GetFileNameExtension(fileName)
         }
 
-        fun Remove(fileName: String)
+        fun Remove(baseName: String)
         {
-            fileNames.remove(fileName)
-            baseNames.remove(StripFileNameExtension(fileName))
+            baseNames.remove(baseName)
         }
 
         fun GetFileName(baseName: String): String?
@@ -92,14 +71,11 @@ class ModuleRegistry(private val adkConfig: AdkExtension) {
                 dirs.add(fileName)
                 continue
             }
-            for (ext in adkConfig.cppImplExt) {
-                if (path.isFile && fileName.endsWith(ext)) {
+            if (path.isFile) {
+                if (adkConfig.IsCppImplFile(fileName)) {
                     implFiles.Add(fileName)
                     continue
-                }
-            }
-            for (ext in adkConfig.cppModuleIfaceExt) {
-                if (path.isFile && fileName.endsWith(ext)) {
+                } else if (adkConfig.IsCppModuleIfaceFile(fileName)) {
                     ifaceFiles.Add(fileName)
                     continue
                 }
@@ -111,11 +87,11 @@ class ModuleRegistry(private val adkConfig: AdkExtension) {
             val baseName = GetSubmoduleName(name)
             ifaceFiles.GetFileName(baseName)?.also {
                 module.SetIfaceFile(dirPath.resolve(it))
-                ifaceFiles.Remove(it)
+                ifaceFiles.Remove(baseName)
             }
             implFiles.GetFileName(baseName)?.also {
-                module.AddImplFile(dirPath.resolve(it))
-                implFiles.Remove(it)
+                module.AddImplFile(dirPath.resolve(it), adkConfig)
+                implFiles.Remove(baseName)
             }
         }
 
@@ -129,15 +105,103 @@ class ModuleRegistry(private val adkConfig: AdkExtension) {
             } else if (implicitModuleName != null) {
                 implicitModuleName
             } else {
-                throw Error("Module name should be specified for root directory $dirPath")
+                throw Error("Module name should be specified for modules root directory $dirPath")
             }
-        val defaultModule = ModuleNode(defaultModuleName)
+        val defaultModule = ModuleNode(defaultModuleName, dirPath, true)
         if (moduleScript != null) {
-            defaultModule.Configure(moduleScript)
+            defaultModule.Configure(moduleScript, adkConfig)
         }
+        defaultModule.FinishConfiguration(adkConfig)
         SetModuleDefaultFiles(defaultModule, defaultModuleName)
 
-        //XXX check all left interface files, create modules for them, add whatever left
-        // implementation files to the default module.
+        /* All the rest interface files imply submodules. */
+        val modules = TreeMap<String, ModuleNode>()
+        while (ifaceFiles.baseNames.isNotEmpty()) {
+            val submoduleName = ifaceFiles.baseNames.keys.first()
+            val moduleName = "$defaultModuleName.$submoduleName"
+            val module = ModuleNode(moduleName, dirPath, false)
+            SetModuleDefaultFiles(module, moduleName)
+            val moduleConfig = moduleScript?.childContexts?.get(submoduleName)
+            if (moduleConfig != null) {
+                module.Configure(moduleConfig, adkConfig)
+            }
+            module.FinishConfiguration(adkConfig)
+            modules[moduleName] = module
+        }
+
+        /* Do not allow name module block without interface file. */
+        if (moduleScript != null) {
+            moduleScript.childContexts.keys.forEach {
+                val moduleName = "$defaultModuleName.$it"
+                if (!modules.containsKey(moduleName)) {
+                    throw Error("Named block `$it` specified without corresponding module " +
+                                "interface file in $dirPath")
+                }
+            }
+        }
+
+        fun IsImplFileReferenced(fileName: String): Boolean
+        {
+            val path = dirPath.resolve(fileName)
+            if (defaultModule.implFiles.contains(path)) {
+                return true
+            }
+            for (module in modules.values) {
+                if (module.implFiles.contains(path)) {
+                    return true
+                }
+            }
+            return false
+        }
+
+        /* Filter out implementation files reference from modules configuration. */
+        implFiles.baseNames.entries.removeAll { IsImplFileReferenced("${it.key}.${it.value}") }
+
+        /* Add all leftover implementation files to default module. */
+        implFiles.baseNames.entries.forEach {
+            defaultModule.AddImplFile(dirPath.resolve("${it.key}.${it.value}"), adkConfig)
+        }
+
+        fun AddModule(module: ModuleNode) {
+            val existingModule = this.modules[module.name]
+            if (existingModule != null) {
+                throw Error("Module already registered: ${module.name}, " +
+                            "previous location: ${existingModule.dirPath}")
+            }
+            this.modules[module.name] = module
+        }
+        AddModule(defaultModule)
+        modules.values.forEach(::AddModule)
+
+        val submodulePaths = TreeSet<File>()
+        fun ProcessSubmodules(module: ModuleNode) {
+            val config = module.config ?: return
+            for (submodulePath in config.submodules.map { it.normalize() }) {
+                submodulePaths.add(submodulePath)
+                ScanDirectory(submodulePath,
+                              if (submodulePath.parentFile == dirPath)
+                                  "${module.name}.${submodulePath.name}" else null,
+                              moduleScriptReader)
+            }
+        }
+
+        ProcessSubmodules(defaultModule)
+        modules.values.forEach { ProcessSubmodules(it) }
+
+        subdirLoop@ for (subdirName in dirs) {
+            val subdirPath = dirPath.resolve(subdirName)
+            if (submodulePaths.contains(subdirPath)) {
+                continue
+            }
+            if (defaultModule.IsDirReferenced(subdirPath)) {
+                continue
+            }
+            for (module in modules.values) {
+                if (module.IsDirReferenced(subdirPath)) {
+                    continue@subdirLoop
+                }
+            }
+            ScanDirectory(subdirPath, "$defaultModuleName.$subdirName", moduleScriptReader)
+        }
     }
 }

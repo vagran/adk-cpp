@@ -83,7 +83,10 @@ open class ModuleExtension(private val project: Project, private val nestedName:
             throw Error("Module block can be nested in top-level module block only")
         }
         val e = ModuleExtension(project, name)
-        ctx.childContexts.add(e.CreateContext(ctx.baseDir))
+        if (name in ctx.childContexts) {
+            throw Error("Named module block specified twice: $name")
+        }
+        ctx.childContexts[name] = (e.CreateContext(ctx.baseDir))
         project.configure(e, config)
         e.CloseContext()
     }

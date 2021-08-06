@@ -81,4 +81,20 @@ open class AdkExtension(project: Project) {
     {
         modulesProp.Append(items)
     }
+
+    companion object {
+        fun StripFileNameExtension(fileName: String): String = fileName.substringBeforeLast('.')
+
+        fun GetFileNameExtension(fileName: String): String = fileName.substringAfterLast('.')
+    }
+
+    fun IsCppModuleIfaceFile(fileName: String): Boolean
+    {
+        return GetFileNameExtension(fileName) in cppModuleIfaceExt
+    }
+
+    fun IsCppImplFile(fileName: String): Boolean
+    {
+        return GetFileNameExtension(fileName) in cppImplExt
+    }
 }
