@@ -22,6 +22,13 @@ open class ModuleExtension(private val project: Project, private val nestedName:
 
     var name: String by ContextProp(ModuleExtensionContext::name)
 
+    var main: Boolean by ContextProp(ModuleExtensionContext::main)
+
+    fun main()
+    {
+        ctx.main = true
+    }
+
     var include: List<File> by ContextProp(ModuleExtensionContext::include)
 
     fun include(vararg items: Any)
@@ -55,6 +62,13 @@ open class ModuleExtension(private val project: Project, private val nestedName:
     fun moduleMap(vararg items: Any)
     {
         ctx.moduleMapProp.Append(items)
+    }
+
+    var depends: List<String> by ContextProp(ModuleExtensionContext::depends)
+
+    fun depends(vararg items: String)
+    {
+        ctx.dependsProp.Append(items)
     }
 
     var define: List<String> by ContextProp(ModuleExtensionContext::define)

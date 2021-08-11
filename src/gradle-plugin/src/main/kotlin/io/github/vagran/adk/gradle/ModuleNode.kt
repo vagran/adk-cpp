@@ -5,7 +5,8 @@ import java.util.*
 import kotlin.collections.ArrayList
 
 
-class ModuleNode(val name: String, val dirPath: File, val isDefault: Boolean) {
+class ModuleNode(val name: String, val dirPath: File, val isDefault: Boolean,
+                 val isMain: Boolean = false) {
     var config: ModuleExtensionContext? = null
     val include = ArrayList<File>()
     val libDir = ArrayList<File>()

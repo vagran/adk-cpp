@@ -18,6 +18,8 @@ class ModuleRegistry(private val adkConfig: AdkExtension) {
         for (modPath in adkConfig.modules) {
             ScanDirectory(modPath.normalize(), null, moduleScriptReader)
         }
+        //XXX resolve dependencies
+
     }
 
     companion object {
@@ -56,6 +58,7 @@ class ModuleRegistry(private val adkConfig: AdkExtension) {
     }
 
     private val modules = TreeMap<String, ModuleNode>()
+    private val mainModules = ArrayList<ModuleNode>()
 
     private fun ScanDirectory(dirPath: File, implicitModuleName: String?,
                               moduleScriptReader: ModuleScriptReader)
@@ -95,6 +98,7 @@ class ModuleRegistry(private val adkConfig: AdkExtension) {
             }
         }
 
+        val isMain = moduleScript?.main ?: false
         /* Default module is one represented by this directory. There may be other modules implied
         * by module interface files and optionally configured by named module block in the module
         * script.
@@ -104,21 +108,30 @@ class ModuleRegistry(private val adkConfig: AdkExtension) {
                 moduleScript.name
             } else if (implicitModuleName != null) {
                 implicitModuleName
+            } else if (isMain) {
+                "main"
             } else {
                 throw Error("Module name should be specified for modules root directory $dirPath")
             }
-        val defaultModule = ModuleNode(defaultModuleName, dirPath, true)
+        val defaultModule = ModuleNode(defaultModuleName, dirPath, true, isMain)
         if (moduleScript != null) {
             defaultModule.Configure(moduleScript, adkConfig)
         }
         defaultModule.FinishConfiguration(adkConfig)
-        SetModuleDefaultFiles(defaultModule, defaultModuleName)
+        if (!isMain) {
+            SetModuleDefaultFiles(defaultModule, defaultModuleName)
+        }
+
+        fun GetSubmoduleFullName(submoduleName: String): String
+        {
+            return if (isMain) submoduleName else "$defaultModuleName.$submoduleName"
+        }
 
         /* All the rest interface files imply submodules. */
         val modules = TreeMap<String, ModuleNode>()
         while (ifaceFiles.baseNames.isNotEmpty()) {
             val submoduleName = ifaceFiles.baseNames.keys.first()
-            val moduleName = "$defaultModuleName.$submoduleName"
+            val moduleName = GetSubmoduleFullName(submoduleName)
             val module = ModuleNode(moduleName, dirPath, false)
             SetModuleDefaultFiles(module, moduleName)
             val moduleConfig = moduleScript?.childContexts?.get(submoduleName)
@@ -132,7 +145,7 @@ class ModuleRegistry(private val adkConfig: AdkExtension) {
         /* Do not allow name module block without interface file. */
         if (moduleScript != null) {
             moduleScript.childContexts.keys.forEach {
-                val moduleName = "$defaultModuleName.$it"
+                val moduleName = GetSubmoduleFullName(it)
                 if (!modules.containsKey(moduleName)) {
                     throw Error("Named block `$it` specified without corresponding module " +
                                 "interface file in $dirPath")
@@ -163,6 +176,9 @@ class ModuleRegistry(private val adkConfig: AdkExtension) {
         }
 
         fun AddModule(module: ModuleNode) {
+            if (module.isMain) {
+                mainModules.add(module)
+            }
             val existingModule = this.modules[module.name]
             if (existingModule != null) {
                 throw Error("Module already registered: ${module.name}, " +

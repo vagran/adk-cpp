@@ -13,6 +13,8 @@ class ModuleExtensionContext(project: Project, val baseDir: File, val nestedName
          readOnlyMessage = if (nestedName != null) "Name already set by named module block" else null)
     var name: String by nameProp
 
+    var main by AdkProperty(project, Boolean::class.java, conventionValue = false)
+
     val includeProp = AdkFileListProperty(project, baseDir = baseDir)
     var include: List<File> by includeProp
 

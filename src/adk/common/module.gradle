@@ -1,0 +1,15 @@
+module {
+    depends("std.core")
+
+    module("string_utils") {
+        depends("std.core")
+    }
+
+    module("MessageComposer") {
+        depends("adk.common", "adk.common.string_utils")
+    }
+
+    module("exceptions") {
+        depends("adk.common.string_utils")
+    }
+}

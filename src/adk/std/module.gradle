@@ -1,0 +1,7 @@
+module {
+    name = "std"
+
+    module("io") {
+        depends("std.core")
+    }
+}
