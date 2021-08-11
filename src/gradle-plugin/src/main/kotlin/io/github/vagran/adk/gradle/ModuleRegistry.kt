@@ -67,9 +67,19 @@ class ModuleRegistry(private val adkConfig: AdkExtension) {
         val dirs = TreeSet<String>()
         val implFiles = FileNameSet()
         val ifaceFiles = FileNameSet()
+        val excludedFiles = TreeSet<File>()
+
+        if (moduleScript != null) {
+            for (file in moduleScript.exclude) {
+                excludedFiles.add(file.normalize())
+            }
+        }
 
         for (fileName in dirPath.list() ?: emptyArray()) {
             val path = dirPath.resolve(fileName)
+            if (path in excludedFiles) {
+                continue
+            }
             if (path.isDirectory) {
                 dirs.add(fileName)
                 continue

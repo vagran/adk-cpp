@@ -42,5 +42,8 @@ class ModuleExtensionContext(project: Project, val baseDir: File, val nestedName
     val libsProp = AdkStringListProperty(project)
     var libs: List<String> by libsProp
 
+    val excludeProp = AdkFileListProperty(project, baseDir = baseDir)
+    var exclude: List<File> by excludeProp
+
     val childContexts = TreeMap<String, ModuleExtensionContext>()
 }

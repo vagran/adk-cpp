@@ -92,6 +92,13 @@ open class ModuleExtension(private val project: Project, private val nestedName:
         ctx.libsProp.Append(items)
     }
 
+    var exclude: List<File> by ContextProp(ModuleExtensionContext::exclude)
+
+    fun exclude(vararg items: Any)
+    {
+        ctx.excludeProp.Append(items)
+    }
+
     fun module(name: String, config: Closure<ModuleExtension>) {
         if (nestedName != null) {
             throw Error("Module block can be nested in top-level module block only")
