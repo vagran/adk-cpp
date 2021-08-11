@@ -18,8 +18,7 @@ class ModuleRegistry(private val adkConfig: AdkExtension) {
         for (modPath in adkConfig.modules) {
             ScanDirectory(modPath.normalize(), null, moduleScriptReader)
         }
-        //XXX resolve dependencies
-
+        ResolveDependencies()
     }
 
     companion object {
@@ -132,16 +131,11 @@ class ModuleRegistry(private val adkConfig: AdkExtension) {
             SetModuleDefaultFiles(defaultModule, defaultModuleName)
         }
 
-        fun GetSubmoduleFullName(submoduleName: String): String
-        {
-            return if (isMain) submoduleName else "$defaultModuleName.$submoduleName"
-        }
-
         /* All the rest interface files imply submodules. */
         val modules = TreeMap<String, ModuleNode>()
         while (ifaceFiles.baseNames.isNotEmpty()) {
             val submoduleName = ifaceFiles.baseNames.keys.first()
-            val moduleName = GetSubmoduleFullName(submoduleName)
+            val moduleName = defaultModule.GetSubmoduleFullName(submoduleName)
             val module = ModuleNode(moduleName, dirPath, false)
             SetModuleDefaultFiles(module, moduleName)
             val moduleConfig = moduleScript?.childContexts?.get(submoduleName)
@@ -155,10 +149,11 @@ class ModuleRegistry(private val adkConfig: AdkExtension) {
         /* Do not allow name module block without interface file. */
         if (moduleScript != null) {
             moduleScript.childContexts.keys.forEach {
-                val moduleName = GetSubmoduleFullName(it)
+                submoduleName ->
+                val moduleName = defaultModule.GetSubmoduleFullName(submoduleName)
                 if (!modules.containsKey(moduleName)) {
-                    throw Error("Named block `$it` specified without corresponding module " +
-                                "interface file in $dirPath")
+                    throw Error("Named block `$submoduleName` specified without corresponding " +
+                                "module interface file in $dirPath")
                 }
             }
         }
@@ -188,11 +183,12 @@ class ModuleRegistry(private val adkConfig: AdkExtension) {
         fun AddModule(module: ModuleNode) {
             if (module.isMain) {
                 mainModules.add(module)
+                return
             }
             val existingModule = this.modules[module.name]
             if (existingModule != null) {
-                throw Error("Module already registered: ${module.name}, " +
-                            "previous location: ${existingModule.dirPath}")
+                throw Error("Module already registered: $module, " +
+                            "previous definition: $existingModule")
             }
             this.modules[module.name] = module
         }
@@ -204,9 +200,10 @@ class ModuleRegistry(private val adkConfig: AdkExtension) {
             val config = module.config ?: return
             for (submodulePath in config.submodules.map { it.normalize() }) {
                 submodulePaths.add(submodulePath)
+
                 ScanDirectory(submodulePath,
                               if (submodulePath.parentFile == dirPath)
-                                  "${module.name}.${submodulePath.name}" else null,
+                                  module.GetSubmoduleFullName(submodulePath.name) else null,
                               moduleScriptReader)
             }
         }
@@ -227,7 +224,32 @@ class ModuleRegistry(private val adkConfig: AdkExtension) {
                     continue@subdirLoop
                 }
             }
-            ScanDirectory(subdirPath, "$defaultModuleName.$subdirName", moduleScriptReader)
+            ScanDirectory(subdirPath, defaultModule.GetSubmoduleFullName(subdirName),
+                          moduleScriptReader)
+        }
+    }
+
+    private fun ResolveDependencies()
+    {
+        val stack = ArrayList<ModuleNode>()
+        for (module in mainModules) {
+            ResolveDependencies(module, stack)
+        }
+    }
+
+    private fun ResolveDependencies(module: ModuleNode, stack: MutableList<ModuleNode>)
+    {
+        for (depName in module.depends) {
+            val depModule = modules[depName]
+                ?: throw Error("Module $module dependency not satisfied: $depName")
+            if (stack.contains(depModule)) {
+                throw Error("Circular reference detected for module $depModule when resolving " +
+                            "dependency of $module")
+            }
+            module.dependNodes.add(depModule)
+            stack.add(module)
+            ResolveDependencies(depModule, stack)
+            stack.removeLast()
         }
     }
 }

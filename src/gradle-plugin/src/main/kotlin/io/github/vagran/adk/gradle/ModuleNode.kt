@@ -17,6 +17,12 @@ class ModuleNode(val name: String, val dirPath: File, val isDefault: Boolean,
     val implFiles = TreeSet<File>()
     val moduleMap = ArrayList<File>()
     val depends = ArrayList<String>()
+    val dependNodes = ArrayList<ModuleNode>()
+
+    fun GetSubmoduleFullName(submoduleName: String): String
+    {
+        return if (isMain) submoduleName else "$name.$submoduleName"
+    }
 
     fun Configure(moduleExtensionContext: ModuleExtensionContext, adkConfig: AdkExtension)
     {
@@ -70,5 +76,10 @@ class ModuleNode(val name: String, val dirPath: File, val isDefault: Boolean,
     fun IsDirReferenced(dirPath: File): Boolean
     {
         return include.contains(dirPath) || libDir.contains(dirPath)
+    }
+
+    override fun toString(): String
+    {
+        return "$name@[$dirPath]"
     }
 }
