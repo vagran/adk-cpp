@@ -10,3 +10,8 @@ enum class BinType(val value: String) {
     LIB("lib"),
     SHARED_LIB("sharedLib")
 }
+
+enum class PropName(val value: String) {
+    ADK_CXX("adkCxx"),
+    ADK_BUILD_TYPE("adkBuildType")
+}

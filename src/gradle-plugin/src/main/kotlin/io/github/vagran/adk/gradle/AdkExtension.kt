@@ -6,12 +6,25 @@ import org.gradle.api.Project
 import java.io.File
 
 
-open class AdkExtension(project: Project) {
+open class AdkExtension(internal val project: Project) {
 
     var cxx: String by AdkProperty(project, String::class.java,
-                                   conventionValue = System.getenv("CXX"))
+        conventionValueProvider = {
+            if (project.hasProperty(PropName.ADK_CXX.value)) {
+                project.property(PropName.ADK_CXX.value).toString()
+            } else {
+                System.getenv("CXX") ?: ""
+            }
+        })
 
-    var buildType: String by AdkProperty(project, String::class.java, BuildType.RELEASE.value,
+    var buildType: String by AdkProperty(project, String::class.java,
+        conventionValueProvider = {
+            if (project.hasProperty(PropName.ADK_BUILD_TYPE.value)) {
+                project.property(PropName.ADK_BUILD_TYPE.value).toString()
+            } else {
+                "release"
+            }
+        },
         validator = {
             v ->
             if (v !in BuildType.values().map { it.value }) {

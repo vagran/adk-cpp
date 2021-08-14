@@ -22,7 +22,12 @@ class AdkProperty<T>(project: Project, type: Class<T>, conventionValue: T? = nul
         }
     }
 
-    operator fun getValue(thisRef: Any, property: KProperty<*>): T = prop.get()
+    operator fun getValue(thisRef: Any, property: KProperty<*>): T
+    {
+        val value = prop.get()
+        validator?.invoke(value)
+        return value
+    }
 
     operator fun setValue(thisRef: Any, property: KProperty<*>, value: T)
     {

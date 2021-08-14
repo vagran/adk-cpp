@@ -37,6 +37,9 @@ class AdkPlugin: Plugin<Project> {
                 moduleExt.CloseContext()
                 return@Build ctx
             }
+
+            val buildTree = BuildTree(adkExt)
+            buildTree.Build(registry)
         }
     }
 }

@@ -8,7 +8,7 @@ class ModuleRegistry(private val adkConfig: AdkExtension) {
     fun interface ModuleScriptReader {
         /**
          * @param dirPath Directory to check for module script.
-         * @return Extension context with all read data, or null no script file found.
+         * @return Extension context with all read data, or null if no script file found.
          */
         fun Read(dirPath: File): ModuleExtensionContext?
     }
@@ -24,7 +24,39 @@ class ModuleRegistry(private val adkConfig: AdkExtension) {
     companion object {
         /** Get last component of fully qualified module name. */
         fun GetSubmoduleName(moduleName: String): String = moduleName.substringAfterLast('.')
+
+        /**
+         * Gather full modules list which also includes all direct and indirect dependencies of the
+         * specified modules.
+         */
+        fun GatherAllDependencies(modules: List<ModuleNode>): List<ModuleNode>
+        {
+            val result = ArrayList<ModuleNode>()
+
+            fun AddDependencies(module: ModuleNode)
+            {
+                if (result.contains(module)) {
+                    return
+                }
+                result.add(module)
+                for (dep in module.dependNodes) {
+                    AddDependencies(dep)
+                }
+            }
+
+            modules.forEach(::AddDependencies)
+
+            return result
+        }
+
+        fun GatherAllDependencies(module: ModuleNode): List<ModuleNode>
+        {
+            return GatherAllDependencies(listOf(module))
+        }
     }
+
+    val modules = TreeMap<String, ModuleNode>()
+    val mainModules = ArrayList<ModuleNode>()
 
     // /////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -55,9 +87,6 @@ class ModuleRegistry(private val adkConfig: AdkExtension) {
             return "$baseName.$ext"
         }
     }
-
-    private val modules = TreeMap<String, ModuleNode>()
-    private val mainModules = ArrayList<ModuleNode>()
 
     private fun ScanDirectory(dirPath: File, implicitModuleName: String?,
                               moduleScriptReader: ModuleScriptReader)
