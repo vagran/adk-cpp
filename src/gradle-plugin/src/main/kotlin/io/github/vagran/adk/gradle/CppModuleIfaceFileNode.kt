@@ -2,4 +2,5 @@ package io.github.vagran.adk.gradle
 
 import java.io.File
 
-class CppModuleIfaceFileNode(path: File, recipe: Recipe? = null): FileNode(path, recipe)
+class CppModuleIfaceFileNode(val module: ModuleNode,
+                             recipe: Recipe? = null): FileNode(module.ifaceFile!!, recipe)

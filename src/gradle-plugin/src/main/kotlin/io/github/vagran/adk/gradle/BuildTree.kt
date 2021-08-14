@@ -43,7 +43,7 @@ class BuildTree(private val adkConfig: AdkExtension) {
 
     private inner class Builder(private val moduleRegistry: ModuleRegistry) {
 
-        private val compilerInfo = CompilerInfo(adkConfig)
+        private val compilerInfo = CompilerInfo(adkConfig, buildDir.resolve("modules-cache"))
 
         fun Build()
         {
@@ -80,14 +80,19 @@ class BuildTree(private val adkConfig: AdkExtension) {
                 ifaceFile ->
                 val compiledModule = CppCompiledModuleFileNode(
                     GetObjBuildPath(ifaceFile, compilerInfo.cppCompiledModuleExt),
+                    module,
                     CppCompiledModuleRecipe(compilerInfo, modules))
+                compiledModule.dependencies.add(CppModuleIfaceFileNode(module))
                 AddNode(compiledModule)
             }
+
             module.implFiles.forEach {
                 implFile ->
                 val objectFile = ObjectFileNode(
                         GetObjBuildPath(implFile, compilerInfo.objFileExt),
-                        CppObjectRecipe(compilerInfo, modules))
+                        CppObjectRecipe(compilerInfo, modules),
+                        module)
+                objectFile.dependencies.add(CppFileNode(implFile, module = module))
                 AddNode(objectFile)
             }
 
