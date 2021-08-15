@@ -5,7 +5,7 @@ import org.gradle.api.tasks.Exec
 
 /** @param modules Target module with all direct and indirect dependencies. */
 class CppCompiledModuleRecipe(private val compilerInfo: CompilerInfo,
-                              private val modules: List<ModuleNode>): Recipe {
+                              private val modules: Iterable<ModuleNode>): Recipe {
 
     override fun CreateTask(artifact: BuildNode, taskFactory: Recipe.TaskFactory<*>): Task
     {

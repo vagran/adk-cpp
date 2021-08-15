@@ -2,11 +2,10 @@ package io.github.vagran.adk.gradle
 
 import org.gradle.api.Task
 import org.gradle.api.tasks.Exec
-import java.io.File
 
 /** @param modules All modules of the executable (with all direct and indirect dependencies) */
 class CppAppExecutableRecipe(private val compilerInfo: CompilerInfo,
-                             private val modules: List<ModuleNode>): Recipe {
+                             private val modules: Iterable<ModuleNode>): Recipe {
 
     override fun CreateTask(artifact: BuildNode, taskFactory: Recipe.TaskFactory<*>): Task
     {
@@ -17,15 +16,12 @@ class CppAppExecutableRecipe(private val compilerInfo: CompilerInfo,
 
         cmd.SetAction(CommandLineBuilder.Action.LINK)
 
-        val sources = ArrayList<File>()
-        sources.addAll(artifact.FindDepDeep<CppCompiledModuleFileNode>().map { it.path })
-        sources.addAll(artifact.FindDepDeep<ObjectFileNode>().map { it.path })
-        sources.forEach { cmd.AddInput(it) }
+        val sources = ArrayList<FileNode>()
+        sources.addAll(artifact.FindDepDeep<CppCompiledModuleFileNode>())
+        sources.addAll(artifact.FindDepDeep<ObjectFileNode>())
+        sources.map { it.path }.forEach { cmd.AddInput(it) }
 
         cmd.SetOutput(artifact.path)
-
-        val depModules = artifact.FindDep<CppCompiledModuleFileNode>()
-        depModules.map { it.path }.forEach { cmd.AddModuleDep(it) }
 
         compilerInfo.adkConfig.libDir.forEach { cmd.AddLibDir(it) }
         modules.flatMap { it.libDir }.forEach { cmd.AddLibDir(it) }
@@ -36,7 +32,7 @@ class CppAppExecutableRecipe(private val compilerInfo: CompilerInfo,
         task.commandLine = cmd.Build().toList()
         task.inputs.files(sources)
         task.outputs.file(artifact.path)
-        task.setDependsOn(depModules.map { it.task })
+        task.setDependsOn(sources.map { it.task })
         return task
     }
 

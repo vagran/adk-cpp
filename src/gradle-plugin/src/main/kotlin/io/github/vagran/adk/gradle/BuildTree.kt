@@ -1,6 +1,11 @@
 package io.github.vagran.adk.gradle
 
+import org.gradle.api.Task
+import org.gradle.api.tasks.Exec
 import java.io.File
+import java.util.*
+import kotlin.collections.ArrayList
+import kotlin.reflect.KClass
 
 /** Represents build plan with all artifacts, their dependencies and required actions to produce
  * each one.
@@ -11,8 +16,19 @@ class BuildTree(private val adkConfig: AdkExtension) {
 
     fun Build(moduleRegistry: ModuleRegistry)
     {
-        Builder(moduleRegistry).Build()
-        //XXX
+        rootNodes.addAll(Builder(moduleRegistry).Build())
+    }
+
+    fun CreateTasks(): Iterable<Task>
+    {
+        val result = ArrayList<Task>()
+        rootNodes.forEach {
+            val task = CreateTask(it)
+            if (task != null) {
+                result.add(task)
+            }
+        }
+        return result
     }
 
     fun GetObjBuildDirectory(sourceDirPath: File): File
@@ -44,8 +60,9 @@ class BuildTree(private val adkConfig: AdkExtension) {
     private inner class Builder(private val moduleRegistry: ModuleRegistry) {
 
         private val compilerInfo = CompilerInfo(adkConfig, buildDir.resolve("modules-cache"))
+        private val processedModules = HashMap<ModuleNode, Iterable<BuildNode>>()
 
-        fun Build()
+        fun Build(): List<BuildNode>
         {
             if (adkConfig.binType != BinType.APP.value) {
                 throw Error("Binary type other than application is not yet supported")
@@ -57,11 +74,16 @@ class BuildTree(private val adkConfig: AdkExtension) {
             for (mainModule in moduleRegistry.mainModules) {
                 binFile.dependencies.addAll(ProcessModule(mainModule))
             }
+            return listOf(binFile)
         }
 
         /** @return Nodes produces by the specified module. */
         private fun ProcessModule(module: ModuleNode): Iterable<BuildNode>
         {
+            val cached = processedModules[module]
+            if (cached != null) {
+                return cached
+            }
             val modules = ModuleRegistry.GatherAllDependencies(module)
             val resultNodes = ArrayList<BuildNode>()
 
@@ -96,7 +118,54 @@ class BuildTree(private val adkConfig: AdkExtension) {
                 AddNode(objectFile)
             }
 
+            processedModules[module] = resultNodes
             return resultNodes
         }
+    }
+
+    private class Counter(var value: Int = 0)
+
+    private val taskNameCounters = TreeMap<String, Counter>()
+
+    private val rootNodes = ArrayList<BuildNode>()
+
+    private fun GetTaskName(prefix: String): String
+    {
+        val idx = taskNameCounters.computeIfAbsent(prefix) { Counter() }.value++
+        return "$prefix$idx"
+    }
+
+    private fun GetTaskFactory(node: BuildNode): Recipe.TaskFactory<*>
+    {
+        val recipe = node.recipe!!
+        return Recipe.TaskFactory {
+            cls: KClass<Task> ->
+            val name = GetTaskName(recipe.taskNamePrefix)
+            val task = adkConfig.project.tasks.register(name, cls.java).get()
+            task.group = recipe.taskGroup
+            task.description = "${recipe.name} $node"
+            task.doFirst {
+                println("${recipe.name} $node")
+            }
+            task
+        }
+    }
+
+    private fun CreateTask(node: BuildNode): Task?
+    {
+        node.task?.also { return it }
+        node.dependencies.forEach { CreateTask(it) }
+        node.recipe?.also {
+            recipe ->
+            val task = recipe.CreateTask(node, GetTaskFactory(node))
+            node.task = task
+            if (task is Exec) {
+                task.doFirst {
+                    println(task.commandLine)
+                }
+            }
+            return task
+        }
+        return null
     }
 }

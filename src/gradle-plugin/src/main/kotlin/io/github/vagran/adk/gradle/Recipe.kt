@@ -15,6 +15,7 @@ interface Recipe {
 
     val name: String
     val taskNamePrefix: String
+    val taskGroup get() = name
 }
 
 inline fun <reified T: Task> Recipe.TaskFactory<*>.CreateTask(): T

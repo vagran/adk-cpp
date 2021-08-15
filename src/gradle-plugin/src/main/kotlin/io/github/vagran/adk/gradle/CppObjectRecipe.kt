@@ -4,7 +4,7 @@ import org.gradle.api.Task
 import org.gradle.api.tasks.Exec
 
 class CppObjectRecipe(private val compilerInfo: CompilerInfo,
-                      private val modules: List<ModuleNode>): Recipe {
+                      private val modules: Iterable<ModuleNode>): Recipe {
 
     override fun CreateTask(artifact: BuildNode, taskFactory: Recipe.TaskFactory<*>): Task
     {

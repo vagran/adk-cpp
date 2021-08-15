@@ -2,6 +2,7 @@ package io.github.vagran.adk.gradle
 
 import java.io.File
 import java.util.*
+import kotlin.collections.LinkedHashSet
 
 class ModuleRegistry(private val adkConfig: AdkExtension) {
 
@@ -29,9 +30,9 @@ class ModuleRegistry(private val adkConfig: AdkExtension) {
          * Gather full modules list which also includes all direct and indirect dependencies of the
          * specified modules.
          */
-        fun GatherAllDependencies(modules: List<ModuleNode>): List<ModuleNode>
+        fun GatherAllDependencies(modules: List<ModuleNode>): Iterable<ModuleNode>
         {
-            val result = ArrayList<ModuleNode>()
+            val result = LinkedHashSet<ModuleNode>()
 
             fun AddDependencies(module: ModuleNode)
             {
@@ -49,7 +50,7 @@ class ModuleRegistry(private val adkConfig: AdkExtension) {
             return result
         }
 
-        fun GatherAllDependencies(module: ModuleNode): List<ModuleNode>
+        fun GatherAllDependencies(module: ModuleNode): Iterable<ModuleNode>
         {
             return GatherAllDependencies(listOf(module))
         }

@@ -40,6 +40,7 @@ class AdkPlugin: Plugin<Project> {
 
             val buildTree = BuildTree(adkExt)
             buildTree.Build(registry)
+            buildTree.CreateTasks()
         }
     }
 }
