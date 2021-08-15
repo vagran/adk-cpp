@@ -61,6 +61,7 @@ class BuildTree(private val adkConfig: AdkExtension) {
 
         private val compilerInfo = CompilerInfo(adkConfig, buildDir.resolve("modules-cache"))
         private val processedModules = HashMap<ModuleNode, Iterable<BuildNode>>()
+        private val defines = HashSet<String>()
 
         fun Build(): List<BuildNode>
         {
@@ -69,6 +70,10 @@ class BuildTree(private val adkConfig: AdkExtension) {
             }
 
             val modules = ModuleRegistry.GatherAllDependencies(moduleRegistry.mainModules)
+
+            defines.addAll(adkConfig.define)
+            modules.forEach { defines.addAll(it.define) }
+
             val binRecipe = CppAppExecutableRecipe(compilerInfo, modules)
             val binFile = ExecutableFileNode(buildDir.resolve(adkConfig.binName), binRecipe)
             for (mainModule in moduleRegistry.mainModules) {
@@ -98,23 +103,26 @@ class BuildTree(private val adkConfig: AdkExtension) {
                 node.dependencies.addAll(depNodes)
             }
 
+            var compiledModule: CppCompiledModuleFileNode? = null
             module.ifaceFile?.also {
                 ifaceFile ->
-                val compiledModule = CppCompiledModuleFileNode(
+                val _compiledModule = CppCompiledModuleFileNode(
                     GetObjBuildPath(ifaceFile, compilerInfo.cppCompiledModuleExt),
                     module,
-                    CppCompiledModuleRecipe(compilerInfo, modules))
-                compiledModule.dependencies.add(CppModuleIfaceFileNode(module))
-                AddNode(compiledModule)
+                    CppCompiledModuleRecipe(compilerInfo, modules, defines))
+                _compiledModule.dependencies.add(CppModuleIfaceFileNode(module))
+                AddNode(_compiledModule)
+                compiledModule = _compiledModule
             }
 
             module.implFiles.forEach {
                 implFile ->
                 val objectFile = ObjectFileNode(
-                        GetObjBuildPath(implFile, compilerInfo.objFileExt),
-                        CppObjectRecipe(compilerInfo, modules),
-                        module)
+                    GetObjBuildPath(implFile, compilerInfo.objFileExt),
+                    CppObjectRecipe(compilerInfo, modules, defines),
+                    module)
                 objectFile.dependencies.add(CppFileNode(implFile, module = module))
+                compiledModule?.also { objectFile.dependencies.add(it) }
                 AddNode(objectFile)
             }
 
@@ -144,9 +152,6 @@ class BuildTree(private val adkConfig: AdkExtension) {
             val task = adkConfig.project.tasks.register(name, cls.java).get()
             task.group = recipe.taskGroup
             task.description = "${recipe.name} $node"
-            task.doFirst {
-                println("${recipe.name} $node")
-            }
             task
         }
     }
@@ -161,8 +166,11 @@ class BuildTree(private val adkConfig: AdkExtension) {
             node.task = task
             if (task is Exec) {
                 task.doFirst {
-                    println(task.commandLine)
+                    println(task.commandLine.joinToString(" "))
                 }
+            }
+            task.doFirst {
+                println("${recipe.name} $node")
             }
             return task
         }

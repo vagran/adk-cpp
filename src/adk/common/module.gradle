@@ -2,7 +2,7 @@ module {
     depends("std.core")
 
     module("string_utils") {
-        depends("std.core")
+        depends("adk.common")
     }
 
     module("MessageComposer") {
@@ -10,6 +10,6 @@ module {
     }
 
     module("exceptions") {
-        depends("adk.common.string_utils")
+        depends("adk.common.MessageComposer")
     }
 }

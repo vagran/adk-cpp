@@ -4,7 +4,8 @@ import org.gradle.api.Task
 import org.gradle.api.tasks.Exec
 
 class CppObjectRecipe(private val compilerInfo: CompilerInfo,
-                      private val modules: Iterable<ModuleNode>): Recipe {
+                      private val modules: Iterable<ModuleNode>,
+                      private val defines: Iterable<String>): Recipe {
 
     override fun CreateTask(artifact: BuildNode, taskFactory: Recipe.TaskFactory<*>): Task
     {
@@ -25,8 +26,7 @@ class CppObjectRecipe(private val compilerInfo: CompilerInfo,
         compilerInfo.adkConfig.cflags.forEach { cmd.AddFlag(it) }
         artifact.module?.also { it.cflags.forEach { cmd.AddFlag(it) } }
 
-        compilerInfo.adkConfig.define.forEach { cmd.AddDefine(it) }
-        modules.flatMap { it.define }.forEach { cmd.AddDefine(it) }
+        defines.forEach { cmd.AddDefine(it) }
 
         compilerInfo.adkConfig.include.forEach { cmd.AddInclude(it) }
         modules.flatMap { it.include }.forEach { cmd.AddInclude(it) }

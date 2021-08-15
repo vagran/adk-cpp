@@ -85,6 +85,13 @@ open class ModuleExtension(private val project: Project, private val nestedName:
         ctx.cflagsProp.Append(items)
     }
 
+    var linkflags: List<String> by ContextProp(ModuleExtensionContext::linkflags)
+
+    fun linkflags(vararg items: String)
+    {
+        ctx.linkflagsProp.Append(items)
+    }
+
     var libs: List<String> by ContextProp(ModuleExtensionContext::libs)
 
     fun libs(vararg items: String)

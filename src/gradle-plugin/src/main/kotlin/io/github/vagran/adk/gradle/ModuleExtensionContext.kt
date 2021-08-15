@@ -39,6 +39,9 @@ class ModuleExtensionContext(project: Project, val baseDir: File, val nestedName
     val cflagsProp = AdkStringListProperty(project)
     var cflags: List<String> by cflagsProp
 
+    val linkflagsProp = AdkStringListProperty(project)
+    var linkflags: List<String> by linkflagsProp
+
     val libsProp = AdkStringListProperty(project)
     var libs: List<String> by libsProp
 

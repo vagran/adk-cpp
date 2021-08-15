@@ -59,6 +59,14 @@ open class AdkExtension(internal val project: Project) {
         cflagsProp.Append(items)
     }
 
+    internal val linkflagsProp = AdkStringListProperty(project, emptyList())
+    var linkflags: List<String> by linkflagsProp
+
+    fun linkflags(vararg items: String)
+    {
+        linkflagsProp.Append(items)
+    }
+
     internal val libsProp = AdkStringListProperty(project, emptyList())
     var libs: List<String> by libsProp
 

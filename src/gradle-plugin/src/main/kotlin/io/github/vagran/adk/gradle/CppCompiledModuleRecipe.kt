@@ -5,7 +5,8 @@ import org.gradle.api.tasks.Exec
 
 /** @param modules Target module with all direct and indirect dependencies. */
 class CppCompiledModuleRecipe(private val compilerInfo: CompilerInfo,
-                              private val modules: Iterable<ModuleNode>): Recipe {
+                              private val modules: Iterable<ModuleNode>,
+                              private val defines: Iterable<String>): Recipe {
 
     override fun CreateTask(artifact: BuildNode, taskFactory: Recipe.TaskFactory<*>): Task
     {
@@ -26,8 +27,7 @@ class CppCompiledModuleRecipe(private val compilerInfo: CompilerInfo,
         compilerInfo.adkConfig.cflags.forEach { cmd.AddFlag(it) }
         artifact.module.cflags.forEach { cmd.AddFlag(it) }
 
-        compilerInfo.adkConfig.define.forEach { cmd.AddDefine(it) }
-        modules.flatMap { it.define }.forEach { cmd.AddDefine(it) }
+        defines.forEach { cmd.AddDefine(it) }
 
         compilerInfo.adkConfig.include.forEach { cmd.AddInclude(it) }
         modules.flatMap { it.include }.forEach { cmd.AddInclude(it) }

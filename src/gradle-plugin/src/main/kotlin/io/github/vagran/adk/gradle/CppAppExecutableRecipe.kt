@@ -23,6 +23,9 @@ class CppAppExecutableRecipe(private val compilerInfo: CompilerInfo,
 
         cmd.SetOutput(artifact.path)
 
+        compilerInfo.adkConfig.linkflags.forEach { cmd.AddFlag(it) }
+        modules.flatMap { it.linkflags }.forEach { cmd.AddFlag(it) }
+
         compilerInfo.adkConfig.libDir.forEach { cmd.AddLibDir(it) }
         modules.flatMap { it.libDir }.forEach { cmd.AddLibDir(it) }
 
@@ -30,7 +33,7 @@ class CppAppExecutableRecipe(private val compilerInfo: CompilerInfo,
         modules.flatMap { it.libs }.forEach { cmd.AddLib(it) }
 
         task.commandLine = cmd.Build().toList()
-        task.inputs.files(sources)
+        task.inputs.files(sources.map { it.path })
         task.outputs.file(artifact.path)
         task.setDependsOn(sources.map { it.task })
         return task

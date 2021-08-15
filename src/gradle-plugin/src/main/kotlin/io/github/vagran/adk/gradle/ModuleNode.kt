@@ -12,6 +12,7 @@ class ModuleNode(val name: String, val dirPath: File, val isDefault: Boolean,
     val libDir = ArrayList<File>()
     val define = ArrayList<String>()
     val cflags = ArrayList<String>()
+    val linkflags = ArrayList<String>()
     val libs = ArrayList<String>()
     var ifaceFile: File? = null
     val implFiles = TreeSet<File>()
@@ -31,6 +32,7 @@ class ModuleNode(val name: String, val dirPath: File, val isDefault: Boolean,
         libDir.addAll(moduleExtensionContext.libDir.map { it.normalize() })
         define.addAll(moduleExtensionContext.define)
         cflags.addAll(moduleExtensionContext.cflags)
+        linkflags.addAll(moduleExtensionContext.linkflags)
         libs.addAll(moduleExtensionContext.libs)
         depends.addAll(moduleExtensionContext.depends)
         moduleMap.addAll(moduleExtensionContext.moduleMap.map { it.normalize() })

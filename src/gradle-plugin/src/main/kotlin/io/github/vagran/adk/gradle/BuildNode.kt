@@ -36,21 +36,23 @@ open class BuildNode(val recipe: Recipe?) {
     fun <T: BuildNode> FindDepDeep(predicate: (BuildNode) -> Boolean): Iterable<T>
     {
         val result = LinkedHashSet<T>()
-        dependencies.forEach { FindDepDeep(result, it, predicate) }
+        val visited = HashSet<BuildNode>()
+        dependencies.forEach { FindDepDeep(result, visited, it, predicate) }
         return result
     }
 
-    private fun <T: BuildNode> FindDepDeep(result: HashSet<T>, node: BuildNode,
+    private fun <T: BuildNode> FindDepDeep(result: HashSet<T>,
+                                           visited: HashSet<BuildNode>,
+                                           node: BuildNode,
                                            predicate: (BuildNode) -> Boolean)
     {
-        if (result.contains(node)) {
+        if (visited.contains(node)) {
             return
         }
-        if (!predicate(node)) {
-            return
+        if (predicate(node)) {
+            @Suppress("UNCHECKED_CAST")
+            result.add(node as T)
         }
-        @Suppress("UNCHECKED_CAST")
-        result.add(node as T)
-        node.dependencies.forEach { FindDepDeep(result, it, predicate) }
+        node.dependencies.forEach { FindDepDeep(result, visited, it, predicate) }
     }
 }
