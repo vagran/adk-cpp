@@ -96,6 +96,7 @@ class ModuleRegistry(private val adkConfig: AdkExtension) {
         val dirs = TreeSet<String>()
         val implFiles = FileNameSet()
         val ifaceFiles = FileNameSet()
+        val moduleMapFiles = FileNameSet()
         val excludedFiles = TreeSet<File>()
 
         if (moduleScript != null) {
@@ -120,6 +121,8 @@ class ModuleRegistry(private val adkConfig: AdkExtension) {
                 } else if (adkConfig.IsCppModuleIfaceFile(fileName)) {
                     ifaceFiles.Add(fileName)
                     continue
+                } else if (adkConfig.IsCppModuleMapFile(fileName)) {
+                    moduleMapFiles.Add(fileName)
                 }
             }
         }
@@ -134,6 +137,10 @@ class ModuleRegistry(private val adkConfig: AdkExtension) {
             implFiles.GetFileName(baseName)?.also {
                 module.AddImplFile(dirPath.resolve(it), adkConfig)
                 implFiles.Remove(baseName)
+            }
+            moduleMapFiles.GetFileName(baseName)?.also {
+                module.moduleMap.add(dirPath.resolve(it))
+                moduleMapFiles.Remove(baseName)
             }
         }
 

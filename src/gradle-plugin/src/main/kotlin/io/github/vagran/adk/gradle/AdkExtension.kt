@@ -79,6 +79,8 @@ open class AdkExtension(internal val project: Project) {
 
     var cppImplExt: List<String> by AdkStringListProperty(project, listOf("cpp"))
 
+    var cppModuleMapExt: List<String> by AdkStringListProperty(project, listOf("modulemap"))
+
     internal val includeProp = AdkFileListProperty(project, conventionValue = emptyList())
     var include: List<File> by includeProp
 
@@ -117,5 +119,10 @@ open class AdkExtension(internal val project: Project) {
     fun IsCppImplFile(fileName: String): Boolean
     {
         return GetFileNameExtension(fileName) in cppImplExt
+    }
+
+    fun IsCppModuleMapFile(fileName: String): Boolean
+    {
+        return GetFileNameExtension(fileName) in cppModuleMapExt
     }
 }
