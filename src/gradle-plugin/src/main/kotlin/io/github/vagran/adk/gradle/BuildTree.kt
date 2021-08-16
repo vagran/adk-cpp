@@ -1,6 +1,7 @@
 package io.github.vagran.adk.gradle
 
 import org.gradle.api.Task
+import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.Exec
 import java.io.File
 import java.util.*
@@ -32,6 +33,15 @@ class BuildTree(private val adkConfig: AdkExtension) {
         task.group = "build"
         task.description = "Build ${adkConfig.binName}"
         task.setDependsOn(tasks)
+        return task
+    }
+
+    fun CreateCleanTask(): Task
+    {
+        val task = adkConfig.project.tasks.register("clean", Delete::class.java).get()
+        task.delete(buildDir)
+        task.group = "clean"
+        task.description = "Delete all build artifacts"
         return task
     }
 
