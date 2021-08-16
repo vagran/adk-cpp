@@ -7,6 +7,6 @@ open class FileNode(val path: File, recipe: Recipe?): BuildNode(recipe) {
 
     override fun toString(): String
     {
-        return path.toString()
+        return path.name.toString()
     }
 }

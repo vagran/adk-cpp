@@ -13,14 +13,7 @@ class AdkPlugin: Plugin<Project> {
         val moduleExt: ModuleExtension =
             project.extensions.create("module", ModuleExtension::class.java, project, null)
 
-//        val task = project.tasks.register("greeting", GreetingTask::class.java)
-
         project.afterEvaluate {
-//            task.configure {
-//                t: GreetingTask ->
-//                t.who = extension.who
-//            }
-
             val registry = ModuleRegistry(adkExt)
 
             registry.Build {
@@ -40,7 +33,7 @@ class AdkPlugin: Plugin<Project> {
 
             val buildTree = BuildTree(adkExt)
             buildTree.Build(registry)
-            buildTree.CreateTasks()
+            buildTree.CreateBuildTask()
         }
     }
 }

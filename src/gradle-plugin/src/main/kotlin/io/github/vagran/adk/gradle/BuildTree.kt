@@ -19,16 +19,20 @@ class BuildTree(private val adkConfig: AdkExtension) {
         rootNodes.addAll(Builder(moduleRegistry).Build())
     }
 
-    fun CreateTasks(): Iterable<Task>
+    fun CreateBuildTask(): Task
     {
-        val result = ArrayList<Task>()
+        val tasks = ArrayList<Task>()
         rootNodes.forEach {
             val task = CreateTask(it)
             if (task != null) {
-                result.add(task)
+                tasks.add(task)
             }
         }
-        return result
+        val task = adkConfig.project.tasks.register("build", Task::class.java).get()
+        task.group = "build"
+        task.description = "Build ${adkConfig.binName}"
+        task.setDependsOn(tasks)
+        return task
     }
 
     fun GetObjBuildDirectory(sourceDirPath: File): File
@@ -170,7 +174,7 @@ class BuildTree(private val adkConfig: AdkExtension) {
                 }
             }
             task.doFirst {
-                println("${recipe.name} $node")
+                println("[${recipe.name}] $node")
             }
             return task
         }
