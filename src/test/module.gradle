@@ -1,0 +1,3 @@
+module {
+    name = "adk.test"
+}

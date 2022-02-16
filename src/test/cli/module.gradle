@@ -1,0 +1,3 @@
+module {
+    depends("adk.cli", "adk.ut")
+}
