@@ -7,3 +7,4 @@ export import <ostream>;
 export import <iostream>;
 export import <sstream>;
 export import <fstream>;
+export import <iomanip>;

@@ -1,6 +1,7 @@
 export module std.core;
 
-export import std_config;
+//XXX
+//export import std_config;
 
 export import <cstddef>;
 export import <cstdint>;
