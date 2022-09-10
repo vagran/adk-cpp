@@ -44,8 +44,6 @@ export import <stack>;
 
 export import <concepts>;
 
-#include "source_location.h"
-
 #if defined(__has_include)
 #   if __has_include(<coroutine>)
         export import <coroutine>;
@@ -55,3 +53,5 @@ export import <concepts>;
 #else
     export import <coroutine>;
 #endif
+
+#include "source_location.h"
